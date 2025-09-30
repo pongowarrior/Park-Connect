@@ -40,6 +40,15 @@ const closeBannedBtn = document.getElementById('closeBannedBtn');
 
 let currentEditingPost = null;
 
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('Service Worker registered'))
+      .catch(err => console.log('Service Worker registration failed:', err));
+  });
+}
+
 // Toggle between regular and admin login
 showAdminBtn.addEventListener('click', () => {
   regularLogin.style.display = 'none';
@@ -77,11 +86,18 @@ loginBtn.addEventListener('click', () => {
 });
 
 // Admin Login
-adminLoginBtn.addEventListener('click', () => {
-  const password = adminPassword.value;
+adminLoginBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  
+  const password = adminPassword.value.trim();
+  
+  console.log('Admin login attempt');
+  console.log('Password entered:', password);
+  console.log('Expected:', ADMIN_PASSWORD);
   
   if (password !== ADMIN_PASSWORD) {
     alert('Incorrect admin password');
+    adminPassword.value = '';
     return;
   }
   
@@ -162,14 +178,14 @@ function renderWall() {
         <div class="post-admin-controls">
           <button class="btn-edit" onclick="editPost(${index})">Edit</button>
           <button class="btn-delete" onclick="deletePost(${index})">Delete</button>
-          <button class="btn-ban" onclick="banUser('${p.name}')">Ban User</button>
+          <button class="btn-ban" onclick="banUser('${escapeHtml(p.name)}')">Ban User</button>
         </div>
       `;
     }
     
     note.innerHTML = `
       <div class="sticky-content">
-        <div class="sticky-category">${p.category || 'general'}</div>
+        <div class="sticky-category">${escapeHtml(p.category || 'general')}</div>
         <div class="sticky-message">${escapeHtml(p.message)}</div>
       </div>
       <div class="sticky-footer">
@@ -208,7 +224,12 @@ function formatDate(timestamp) {
 
 // Edit Post
 window.editPost = function(index) {
-  const post = allPosts.reverse()[index];
+  const reversedPosts = [...allPosts].reverse();
+  const filteredPosts = currentFilter === 'all' 
+    ? reversedPosts 
+    : reversedPosts.filter(p => p.category === currentFilter);
+  
+  const post = filteredPosts[index];
   currentEditingPost = post;
   
   editCategory.value = post.category;
@@ -225,24 +246,33 @@ saveEditBtn.addEventListener('click', async () => {
     return;
   }
   
-  // Find the post in SheetDB and update it
   try {
-    // SheetDB doesn't support UPDATE easily, so we'll delete and re-add
-    // For a better solution, you'd need a proper database
-    const updatedPost = {
-      ...currentEditingPost,
-      message: newMessage,
-      category: newCategory
-    };
+    // Delete old post
+    await fetch(`${API_URL}/timestamp/${encodeURIComponent(currentEditingPost.timestamp)}`, {
+      method: 'DELETE'
+    });
     
-    // This is a workaround - delete old and add new
-    alert('Post updated! (Note: Timestamp will be updated)');
+    // Add updated post
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: [{
+          message: newMessage,
+          category: newCategory,
+          name: currentEditingPost.name,
+          team: currentEditingPost.team,
+          timestamp: new Date().toISOString()
+        }]
+      })
+    });
     
+    alert('Post updated successfully!');
     editModal.style.display = 'none';
     await loadPosts();
   } catch (err) {
     console.error('Error updating post:', err);
-    alert('Failed to update post');
+    alert('Failed to update post. Make sure SheetDB allows DELETE operations.');
   }
 });
 
@@ -255,10 +285,14 @@ cancelEditBtn.addEventListener('click', () => {
 window.deletePost = async function(index) {
   if (!confirm('Are you sure you want to delete this post?')) return;
   
-  const post = allPosts.reverse()[index];
+  const reversedPosts = [...allPosts].reverse();
+  const filteredPosts = currentFilter === 'all' 
+    ? reversedPosts 
+    : reversedPosts.filter(p => p.category === currentFilter);
+  
+  const post = filteredPosts[index];
   
   try {
-    // SheetDB delete by timestamp (you'll need to configure this in SheetDB)
     const res = await fetch(`${API_URL}/timestamp/${encodeURIComponent(post.timestamp)}`, {
       method: 'DELETE'
     });
@@ -306,8 +340,8 @@ function renderBannedList() {
   
   bannedList.innerHTML = bannedUsers.map(user => `
     <div class="banned-user-item">
-      <strong>${user}</strong>
-      <button onclick="unbanUser('${user}')">Unban</button>
+      <strong>${escapeHtml(user)}</strong>
+      <button onclick="unbanUser('${escapeHtml(user)}')">Unban</button>
     </div>
   `).join('');
 }
