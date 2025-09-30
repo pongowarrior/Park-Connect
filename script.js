@@ -16,8 +16,10 @@ async function loadPosts() {
     const posts = await res.json();
     posts.reverse().forEach(p => {
       const el = document.createElement('p');
-      el.innerHTML = `${p.message}<span class="timestamp">${new Date(p.timestamp).toLocaleString()}</span>`;
+      el.innerHTML = `${p.message}<span class="timestamp">${new Date(p.timestamp).toLocaleTimeString()}</span>`;
+      el.style.setProperty('--rand', Math.random());
       wall.appendChild(el);
+      makeDraggable(el);
     });
   } catch (err) {
     console.error("Error loading posts:", err);
@@ -52,6 +54,36 @@ form.addEventListener('submit', async (e) => {
   btn.disabled = false;
   loadPosts();
 });
+
+// Make posts draggable
+function makeDraggable(el) {
+  let isDragging = false, startX, startY, origX, origY;
+
+  el.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = el.getBoundingClientRect();
+    origX = rect.left;
+    origY = rect.top;
+    el.style.position = 'absolute';
+    el.style.zIndex = 1000;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    el.style.left = `${origX + dx}px`;
+    el.style.top = `${origY + dy}px`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    el.style.zIndex = '';
+  });
+}
 
 // Initial load
 loadPosts();

@@ -66,47 +66,74 @@ button {
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.3s, transform 0.2s;
 }
 
 button:hover {
   background: #2381b8;
+  transform: scale(1.05);
 }
 
-/* Wall */
+/* Wall: Masonry Grid */
 #wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-auto-rows: minmax(100px, auto);
+  gap: 15px;
   width: 100%;
-  max-width: 600px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  max-width: 900px;
+  justify-items: center;
+  padding-bottom: 2rem;
 }
 
-/* Post Styling */
+/* Post Styling - Sticky Notes */
 #wall p {
-  background: #2d9cdb10; /* subtle blue bubble */
-  border-left: 4px solid #2d9cdb;
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   border-radius: 12px;
   font-size: 1rem;
+  width: 100%;
+  min-height: 80px;
+  color: #222;
   position: relative;
   opacity: 0;
-  transform: translateY(20px);
-  animation: fadeInUp 0.5s forwards;
+  transform: translateY(-50px) rotate(calc(-5deg + 10deg * var(--rand)));
+  animation: dropIn 0.6s forwards;
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
 }
 
+/* Random pastel background colors */
+#wall p:nth-child(odd) { background: #fffb7d; } /* yellow */
+#wall p:nth-child(even) { background: #ffd7a8; } /* peach */
+#wall p:nth-child(3n) { background: #a8ffd1; } /* mint */
+#wall p:nth-child(4n) { background: #a8d1ff; } /* blue */
+
+#wall p:hover {
+  transform: scale(1.05) rotate(calc(-5deg + 10deg * var(--rand)));
+  box-shadow: 4px 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Timestamp */
 #wall p span.timestamp {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #555;
   display: block;
   margin-top: 0.25rem;
 }
 
-/* Animations */
-@keyframes fadeInUp {
-  to {
+/* Drop Animation */
+@keyframes dropIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50px) rotate(calc(-5deg + 10deg * var(--rand)));
+  }
+  60% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(10px) rotate(calc(-5deg + 10deg * var(--rand)));
+  }
+  100% {
+    transform: translateY(0) rotate(calc(-5deg + 10deg * var(--rand)));
   }
 }
 
@@ -114,4 +141,5 @@ button:hover {
 @media (max-width: 640px) {
   h1 { font-size: 1.5rem; }
   input, button { font-size: 0.9rem; }
+  #wall { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 }
