@@ -17,19 +17,31 @@
     <div class="login-card">
       <h1>🏕️ Park Connect</h1>
       <p>Stay connected with your team</p>
-      <input type="text" id="userName" placeholder="Your name" required />
-      <select id="userTeam" required>
-        <option value="">Select your team...</option>
-        <option value="F&B">Food & Beverage</option>
-        <option value="Maintenance">Maintenance</option>
-        <option value="Security">Security</option>
-        <option value="Entertainment">Entertainment</option>
-        <option value="Admin">Administration</option>
-        <option value="Cleaning">Cleaning</option>
-        <option value="Guest Services">Guest Services</option>
-        <option value="Other">Other</option>
-      </select>
-      <button id="loginBtn">Enter Park Connect</button>
+      
+      <!-- Regular Login -->
+      <div id="regularLogin">
+        <input type="text" id="userName" placeholder="Your name" required />
+        <select id="userTeam" required>
+          <option value="">Select your team...</option>
+          <option value="F&B">Food & Beverage</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Security">Security</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Admin">Administration</option>
+          <option value="Cleaning">Cleaning</option>
+          <option value="Guest Services">Guest Services</option>
+          <option value="Other">Other</option>
+        </select>
+        <button id="loginBtn">Enter Park Connect</button>
+        <button id="showAdminBtn" class="admin-toggle-btn">Admin Login</button>
+      </div>
+      
+      <!-- Admin Login -->
+      <div id="adminLogin" style="display: none;">
+        <input type="password" id="adminPassword" placeholder="Admin password" required />
+        <button id="adminLoginBtn">Login as Admin</button>
+        <button id="showRegularBtn" class="admin-toggle-btn">Back to Regular Login</button>
+      </div>
     </div>
   </div>
 
@@ -44,6 +56,14 @@
         </div>
       </div>
     </header>
+
+    <!-- Admin Panel (only visible to admin) -->
+    <div id="adminPanel" style="display: none;">
+      <div class="admin-panel-content">
+        <h3>🛡️ Admin Controls</h3>
+        <button id="viewBannedBtn" class="admin-btn">View Banned Users (<span id="bannedCount">0</span>)</button>
+      </div>
+    </div>
 
     <div class="filters">
       <button class="filter-btn active" data-filter="all">All</button>
@@ -78,8 +98,36 @@
     </form>
   </div>
 
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Edit Post</h3>
+      <select id="editCategory" required>
+        <option value="maintenance">Maintenance</option>
+        <option value="events">Events</option>
+        <option value="shifts">Shifts</option>
+        <option value="f&b">F&B</option>
+        <option value="security">Security</option>
+        <option value="general">General</option>
+        <option value="lost&found">Lost & Found</option>
+      </select>
+      <textarea id="editMessage" maxlength="200" required></textarea>
+      <div class="modal-buttons">
+        <button id="saveEditBtn" class="btn-primary">Save</button>
+        <button id="cancelEditBtn" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banned Users Modal -->
+  <div id="bannedModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Banned Users</h3>
+      <div id="bannedList"></div>
+      <button id="closeBannedBtn" class="btn-secondary">Close</button>
+    </div>
+  </div>
+
   <script src="script.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
 </body>
 </html>
