@@ -4,7 +4,7 @@ const wall = document.getElementById('wall');
 
 const API_URL = "https://sheetdb.io/api/v1/gsn1yzn8shex6";
 
-// Load posts
+// Load posts from SheetDB
 async function loadPosts() {
   wall.innerHTML = "";
   try {

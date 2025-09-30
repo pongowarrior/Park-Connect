@@ -8,7 +8,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: 70px; /* space for floating input */
+  padding-bottom: 80px; /* space for floating input */
 }
 
 /* Header */
@@ -28,33 +28,38 @@ h1 {
   color: #2d9cdb;
 }
 
-/* Wall */
+/* Wall grid */
 #wall {
   width: 100%;
   max-width: 480px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
   padding: 0.5rem;
-  overflow-y: auto;
 }
 
-/* Posts */
+/* Sticky-note posts */
 #wall p {
   padding: 1rem;
   border-radius: 12px;
   background: #fffb7d;
   color: #222;
   opacity: 0;
-  transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand)));
+  transform: translateY(-20px) rotate(calc(-5deg + 10deg * var(--rand)));
   animation: dropIn 0.5s forwards;
   box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
   word-break: break-word;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 #wall p:nth-child(even) { background: #ffd7a8; }
 #wall p:nth-child(3n) { background: #a8ffd1; }
 #wall p:nth-child(4n) { background: #a8d1ff; }
+
+#wall p:hover {
+  transform: scale(1.02) rotate(calc(-5deg + 10deg * var(--rand)));
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+}
 
 #wall p span.timestamp {
   display: block;
@@ -64,8 +69,8 @@ h1 {
 }
 
 @keyframes dropIn {
-  0% { opacity: 0; transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand))); }
-  100% { opacity: 1; transform: translateY(0) rotate(calc(-3deg + 6deg * var(--rand))); }
+  0% { opacity: 0; transform: translateY(-20px) rotate(calc(-5deg + 10deg * var(--rand))); }
+  100% { opacity: 1; transform: translateY(0) rotate(calc(-5deg + 10deg * var(--rand))); }
 }
 
 /* Floating input bar */
