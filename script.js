@@ -2,10 +2,9 @@ const form = document.getElementById('postForm');
 const input = document.getElementById('postInput');
 const wall = document.getElementById('wall');
 
-// Use your SheetDB API endpoint
 const API_URL = "https://sheetdb.io/api/v1/gsn1yzn8shex6";
 
-// Fetch & display posts
+// Load posts
 async function loadPosts() {
   wall.innerHTML = "";
   try {
@@ -15,10 +14,9 @@ async function loadPosts() {
       return;
     }
     const posts = await res.json();
-    // posts is an array of objects { message: "...", timestamp: "..." }
     posts.reverse().forEach(p => {
       const el = document.createElement('p');
-      el.textContent = p.message;
+      el.innerHTML = `${p.message}<span class="timestamp">${new Date(p.timestamp).toLocaleString()}</span>`;
       wall.appendChild(el);
     });
   } catch (err) {
@@ -32,31 +30,28 @@ form.addEventListener('submit', async (e) => {
   const text = input.value.trim();
   if (!text) return;
 
+  const btn = form.querySelector('button');
+  btn.disabled = true;
+
   try {
     const res = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         data: [
-          {
-            message: text,
-            timestamp: new Date().toISOString()
-          }
+          { message: text, timestamp: new Date().toISOString() }
         ]
       })
     });
-    if (!res.ok) {
-      console.error("Failed to post:", res.status, res.statusText);
-    }
+    if (!res.ok) console.error("Failed to post:", res.status, res.statusText);
   } catch (err) {
     console.error("Error posting:", err);
   }
-  
+
   input.value = "";
+  btn.disabled = false;
   loadPosts();
 });
 
-// Load posts when page loads
+// Initial load
 loadPosts();
