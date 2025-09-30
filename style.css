@@ -28,12 +28,52 @@ h1 {
   color: #2d9cdb;
 }
 
+/* Wall */
+#wall {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 1rem;
+}
+
+/* Posts */
+#wall p {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #fffb7d;
+  color: #222;
+  opacity: 0;
+  transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand)));
+  animation: dropIn 0.5s forwards;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+  word-break: break-word;
+}
+
+#wall p:nth-child(even) { background: #ffd7a8; }
+#wall p:nth-child(3n) { background: #a8ffd1; }
+#wall p:nth-child(4n) { background: #a8d1ff; }
+
+#wall p span.timestamp {
+  display: block;
+  font-size: 0.65rem;
+  color: #555;
+  margin-top: 0.25rem;
+}
+
+@keyframes dropIn {
+  0% { opacity: 0; transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand))); }
+  100% { opacity: 1; transform: translateY(0) rotate(calc(-3deg + 6deg * var(--rand))); }
+}
+
 /* Form */
 form {
   width: 100%;
+  max-width: 480px;
   display: flex;
   gap: 0.3rem;
-  margin: 0.5rem 0;
+  margin-top: 0.5rem;
 }
 
 input {
@@ -58,53 +98,4 @@ button {
 button:hover {
   background: #2381b8;
   transform: scale(1.05);
-}
-
-/* Wall */
-#wall {
-  width: 100%;
-  max-width: 480px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
-  padding-bottom: 2rem;
-}
-
-/* Posts */
-#wall p {
-  padding: 1rem;
-  border-radius: 12px;
-  background: #fffb7d; /* default sticky note */
-  color: #222;
-  opacity: 0;
-  transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand)));
-  animation: dropIn 0.5s forwards;
-  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-  word-break: break-word;
-  position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-#wall p:nth-child(even) { background: #ffd7a8; }
-#wall p:nth-child(3n) { background: #a8ffd1; }
-#wall p:nth-child(4n) { background: #a8d1ff; }
-
-#wall p:hover {
-  transform: scale(1.02) rotate(calc(-3deg + 6deg * var(--rand)));
-  box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
-}
-
-/* Timestamp */
-#wall p span.timestamp {
-  display: block;
-  font-size: 0.65rem;
-  color: #555;
-  margin-top: 0.25rem;
-}
-
-/* Drop animation */
-@keyframes dropIn {
-  0% { opacity: 0; transform: translateY(-20px) rotate(calc(-3deg + 6deg * var(--rand))); }
-  100% { opacity: 1; transform: translateY(0) rotate(calc(-3deg + 6deg * var(--rand))); }
 }

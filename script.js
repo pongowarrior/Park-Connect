@@ -17,6 +17,8 @@ async function loadPosts() {
       el.style.setProperty('--rand', Math.random());
       wall.appendChild(el);
     });
+    // Scroll to bottom if desired:
+    // wall.scrollTop = wall.scrollHeight;
   } catch (err) { console.error("Error loading posts:", err); }
 }
 
@@ -30,16 +32,21 @@ form.addEventListener('submit', async (e) => {
   btn.disabled = true;
   
   try {
-    await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: [{ message: text, timestamp: new Date().toISOString() }] })
+      body: JSON.stringify({
+        data: [
+          { message: text, timestamp: new Date().toISOString() }
+        ]
+      })
     });
+    if (!res.ok) console.error("Failed to post:", res.statusText);
   } catch (err) { console.error("Error posting:", err); }
   
   input.value = "";
   btn.disabled = false;
-  loadPosts();
+  loadPosts(); // Refresh wall with all posts
 });
 
 // Initial load
