@@ -15,6 +15,7 @@ async function loadPosts() {
       const el = document.createElement('p');
       el.innerHTML = `${p.message}<span class="timestamp">${new Date(p.timestamp).toLocaleTimeString()}</span>`;
       el.style.setProperty('--rand', Math.random());
+      el.style.setProperty('--rand2', Math.random());
       wall.appendChild(el);
     });
   } catch (err) { console.error("Error loading posts:", err); }
@@ -44,7 +45,7 @@ form.addEventListener('submit', async (e) => {
   
   input.value = "";
   btn.disabled = false;
-  loadPosts(); // Refresh wall with all posts
+  loadPosts(); // Refresh wall
 });
 
 // Initial load
