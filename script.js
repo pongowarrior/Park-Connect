@@ -17,8 +17,6 @@ async function loadPosts() {
       el.style.setProperty('--rand', Math.random());
       wall.appendChild(el);
     });
-    // Scroll to bottom if desired:
-    // wall.scrollTop = wall.scrollHeight;
   } catch (err) { console.error("Error loading posts:", err); }
 }
 

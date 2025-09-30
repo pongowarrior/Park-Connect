@@ -8,7 +8,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
+  padding-bottom: 70px; /* space for floating input */
 }
 
 /* Header */
@@ -35,7 +35,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-bottom: 1rem;
+  padding: 0.5rem;
+  overflow-y: auto;
 }
 
 /* Posts */
@@ -67,16 +68,24 @@ h1 {
   100% { opacity: 1; transform: translateY(0) rotate(calc(-3deg + 6deg * var(--rand))); }
 }
 
-/* Form */
-form {
-  width: 100%;
+/* Floating input bar */
+form#postForm {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
   max-width: 480px;
   display: flex;
   gap: 0.3rem;
-  margin-top: 0.5rem;
+  background: #fff;
+  padding: 0.4rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 100;
 }
 
-input {
+form#postForm input {
   flex: 1;
   padding: 0.6rem;
   border: 2px solid #222;
@@ -84,7 +93,7 @@ input {
   font-size: 1rem;
 }
 
-button {
+form#postForm button {
   padding: 0.6rem 1rem;
   background: #2d9cdb;
   color: white;
@@ -95,7 +104,7 @@ button {
   transition: background 0.2s, transform 0.2s;
 }
 
-button:hover {
+form#postForm button:hover {
   background: #2381b8;
   transform: scale(1.05);
 }
