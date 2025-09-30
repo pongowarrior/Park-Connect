@@ -37,38 +37,30 @@ h1 {
   padding: 0.5rem;
 }
 
-/* Sticky-note posts */
-#wall p {
-  padding: 1rem;
-  border-radius: 12px;
+/* Sticky-note container */
+.sticky {
   background: #fffb7d;
-  color: #222;
-  min-height: 140px; /* square-ish */
+  border-radius: 12px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+  min-height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  word-break: break-word;
+  padding: 1rem;
   transform: rotate(calc(-5deg + 10deg * var(--rand))) translateY(calc(-5px + 10px * var(--rand2)));
-  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
   transition: transform 0.2s, box-shadow 0.2s;
+  word-break: break-word;
 }
 
-/* Random colors for fun */
-#wall p:nth-child(even) { background: #ffd7a8; }
-#wall p:nth-child(3n) { background: #a8ffd1; }
-#wall p:nth-child(4n) { background: #a8d1ff; }
+/* Fun color variations */
+.sticky:nth-child(even) { background: #ffd7a8; }
+.sticky:nth-child(3n) { background: #a8ffd1; }
+.sticky:nth-child(4n) { background: #a8d1ff; }
 
-#wall p:hover {
-  transform: scale(1.02) rotate(calc(-5deg + 10deg * var(--rand))) translateY(calc(-5px + 10px * var(--rand2)));
+.sticky:hover {
+  transform: scale(1.05) rotate(calc(-5deg + 10deg * var(--rand))) translateY(calc(-5px + 10px * var(--rand2)));
   box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
-}
-
-#wall p span.timestamp {
-  display: block;
-  font-size: 0.65rem;
-  color: #555;
-  margin-top: 0.25rem;
 }
 
 /* Floating input bar */

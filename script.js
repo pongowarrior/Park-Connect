@@ -12,11 +12,20 @@ async function loadPosts() {
     if (!res.ok) { console.error("Failed to fetch posts:", res.statusText); return; }
     const posts = await res.json();
     posts.reverse().forEach(p => {
-      const el = document.createElement('p');
-      el.innerHTML = `${p.message}<span class="timestamp">${new Date(p.timestamp).toLocaleTimeString()}</span>`;
-      el.style.setProperty('--rand', Math.random());
-      el.style.setProperty('--rand2', Math.random());
-      wall.appendChild(el);
+      // Sticky note container
+      const postDiv = document.createElement('div');
+      postDiv.classList.add('sticky');
+      
+      // Post text
+      const msg = document.createElement('p');
+      msg.textContent = p.message;
+      postDiv.appendChild(msg);
+      
+      // Random rotation and offset
+      postDiv.style.setProperty('--rand', Math.random());
+      postDiv.style.setProperty('--rand2', Math.random());
+      
+      wall.appendChild(postDiv);
     });
   } catch (err) { console.error("Error loading posts:", err); }
 }
@@ -45,7 +54,7 @@ form.addEventListener('submit', async (e) => {
   
   input.value = "";
   btn.disabled = false;
-  loadPosts(); // Refresh wall
+  loadPosts();
 });
 
 // Initial load
