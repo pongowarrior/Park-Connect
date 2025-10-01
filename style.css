@@ -133,6 +133,25 @@ h1 {
   margin: 1rem auto;
   padding: 0 1rem;
   display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-section {
+  width: 100%;
+}
+
+.filter-heading {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.filter-buttons {
+  display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
@@ -236,6 +255,22 @@ h1 {
 
 .sticky[data-category="lost&found"] { 
   background: #d4a8ff; 
+}
+
+.sticky[data-category="cleaning"] { 
+  background: #c4e1ff; 
+}
+
+.sticky[data-category="administration"] { 
+  background: #ffe4c4; 
+}
+
+.sticky[data-category="entertainment"] { 
+  background: #ffc4e1; 
+}
+
+.sticky[data-category="shop"] { 
+  background: #d4ffc4; 
 }
 
 /* Post Form */

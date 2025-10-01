@@ -30,6 +30,7 @@
           <option value="Admin">Administration</option>
           <option value="Cleaning">Cleaning</option>
           <option value="Guest Services">Guest Services</option>
+          <option value="Shop">Shop</option>
           <option value="Other">Other</option>
         </select>
         <button id="loginBtn" type="button">Enter Park Connect</button>
@@ -66,14 +67,29 @@
     </div>
 
     <div class="filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="maintenance">Maintenance</button>
-      <button class="filter-btn" data-filter="events">Events</button>
-      <button class="filter-btn" data-filter="shifts">Shifts</button>
-      <button class="filter-btn" data-filter="f&b">F&B</button>
-      <button class="filter-btn" data-filter="security">Security</button>
-      <button class="filter-btn" data-filter="general">General</button>
-      <button class="filter-btn" data-filter="lost&found">Lost & Found</button>
+      <div class="filter-section">
+        <h4 class="filter-heading">Main</h4>
+        <div class="filter-buttons">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="shifts">Shifts</button>
+          <button class="filter-btn" data-filter="events">Events</button>
+          <button class="filter-btn" data-filter="lost&found">Lost & Found</button>
+          <button class="filter-btn" data-filter="general">General</button>
+        </div>
+      </div>
+      
+      <div class="filter-section">
+        <h4 class="filter-heading">Departments</h4>
+        <div class="filter-buttons">
+          <button class="filter-btn" data-filter="f&b">Food & Beverage</button>
+          <button class="filter-btn" data-filter="maintenance">Maintenance</button>
+          <button class="filter-btn" data-filter="cleaning">Cleaning</button>
+          <button class="filter-btn" data-filter="administration">Administration</button>
+          <button class="filter-btn" data-filter="security">Security</button>
+          <button class="filter-btn" data-filter="entertainment">Entertainment</button>
+          <button class="filter-btn" data-filter="shop">Shop</button>
+        </div>
+      </div>
     </div>
 
     <section id="wall"></section>
@@ -81,14 +97,22 @@
     <form id="postForm">
       <div class="form-content">
         <select id="postCategory" required>
-          <option value="">Category...</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="events">Events</option>
-          <option value="shifts">Shifts</option>
-          <option value="f&b">F&B</option>
-          <option value="security">Security</option>
-          <option value="general">General</option>
-          <option value="lost&found">Lost & Found</option>
+          <option value="">Select category...</option>
+          <optgroup label="Main">
+            <option value="shifts">Shifts</option>
+            <option value="events">Events</option>
+            <option value="lost&found">Lost & Found</option>
+            <option value="general">General</option>
+          </optgroup>
+          <optgroup label="Departments">
+            <option value="f&b">Food & Beverage</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="cleaning">Cleaning</option>
+            <option value="administration">Administration</option>
+            <option value="security">Security</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="shop">Shop</option>
+          </optgroup>
         </select>
         <div class="form-row">
           <input type="text" id="postInput" maxlength="200" placeholder="What's happening?" required />
@@ -103,13 +127,21 @@
     <div class="modal-content">
       <h3>Edit Post</h3>
       <select id="editCategory" required>
-        <option value="maintenance">Maintenance</option>
-        <option value="events">Events</option>
-        <option value="shifts">Shifts</option>
-        <option value="f&b">F&B</option>
-        <option value="security">Security</option>
-        <option value="general">General</option>
-        <option value="lost&found">Lost & Found</option>
+        <optgroup label="Main">
+          <option value="shifts">Shifts</option>
+          <option value="events">Events</option>
+          <option value="lost&found">Lost & Found</option>
+          <option value="general">General</option>
+        </optgroup>
+        <optgroup label="Departments">
+          <option value="f&b">Food & Beverage</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="cleaning">Cleaning</option>
+          <option value="administration">Administration</option>
+          <option value="security">Security</option>
+          <option value="entertainment">Entertainment</option>
+          <option value="shop">Shop</option>
+        </optgroup>
       </select>
       <textarea id="editMessage" maxlength="200" required></textarea>
       <div class="modal-buttons">
