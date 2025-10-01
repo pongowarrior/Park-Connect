@@ -93,7 +93,7 @@ let allPosts = [];
 async function uploadImageToImgBB(base64DataUri) {
   const url = `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`;
   
-  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'YOUR_IMGBB_API_KEY') {
+  if (!IMGBB_API_KEY) {
     console.error('ImgBB API Key is not set. Cannot upload image.');
     return null;
   }
@@ -413,13 +413,10 @@ async function loadPosts() {
     
     // Check for new posts and notify
     if (lastPostCount > 0 && newPosts.length > lastPostCount) {
-      const newPostsCount = newPosts.length - lastPostCount;
-      // Get the last post, assuming the API returns them in a certain order or we sort it later.
-      // Better to check for a new timestamp than relying on array order for notification.
-      // Since renderWall reverses, we'll use the pre-reversed array for notification simplicity.
-      
       // Find the last known post time
-      const lastKnownPostTime = allPosts.length > 0 ? new Date([...allPosts].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))[0].timestamp) : new Date(0);
+      const lastKnownPostTime = allPosts.length > 0 
+        ? new Date([...allPosts].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))[0].timestamp) 
+        : new Date(0);
       
       const trulyNewPosts = newPosts.filter(p => new Date(p.timestamp) > lastKnownPostTime);
       
@@ -458,20 +455,18 @@ function renderWall() {
     });
   }
   
+  // Sort by timestamp descending
+  filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
   if (filtered.length === 0) {
     wall.innerHTML = '<div class="empty-state"><h2>No posts yet</h2><p>Be the first to post!</p></div>';
     return;
   }
   
-  // Sort by timestamp descending before reversing for rendering order (newest at bottom)
-  // Reversing twice is unnecessary complexity; sort descending and iterate.
-  filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  
   filtered.forEach((p, index) => {
     const note = document.createElement('div');
     note.classList.add('sticky');
     note.dataset.category = p.category || 'general';
-    // Use the index for filtering context, although deleting relies on timestamp/row_id
     note.dataset.index = index; 
     note.style.setProperty('--rand', Math.random());
     
@@ -483,6 +478,7 @@ function renderWall() {
     
     let adminControls = '';
     if (currentUser.isAdmin) {
+      // Only show controls if user is Admin
       adminControls = `
         <div class="post-admin-controls">
           <button class="btn-edit" onclick="editPost(${index})">Edit</button>
@@ -552,6 +548,12 @@ function getPostByIndex(index) {
 
 // Edit Post
 window.editPost = function(index) {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
+  
   const post = getPostByIndex(index);
   if (!post) return;
   
@@ -564,6 +566,13 @@ window.editPost = function(index) {
 
 // Save Edit (replaces old post with new one - SheetDB workaround)
 saveEditBtn.addEventListener('click', async () => {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    editModal.style.display = 'none';
+    return;
+  }
+  
   const newMessage = editMessage.value.trim();
   const newCategory = editCategory.value;
   
@@ -583,8 +592,7 @@ saveEditBtn.addEventListener('click', async () => {
     
     if (!deleteRes.ok) {
        console.error('Delete failed:', deleteRes.statusText);
-       // Attempt to proceed, but warn the user
-       // We don't block the post entirely as it's possible SheetDB already deleted it but didn't return 200/204
+       // We allow the new post to proceed but the user is warned
     }
     
     // 2. Add the new post
@@ -619,6 +627,12 @@ cancelEditBtn.addEventListener('click', () => {
 
 // Delete Post
 window.deletePost = async function(index) {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
+  
   if (!confirm('Are you sure you want to delete this post?')) return;
   
   const post = getPostByIndex(index);
@@ -643,6 +657,12 @@ window.deletePost = async function(index) {
 
 // Ban User
 window.banUser = function(username) {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
+  
   if (!confirm(`Ban user "${username}"? They won't be able to post anymore.`)) return;
   
   const lowerName = username.toLowerCase();
@@ -656,6 +676,11 @@ window.banUser = function(username) {
 
 // View Banned Users
 viewBannedBtn.addEventListener('click', () => {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
   renderBannedList();
   bannedModal.style.display = 'flex';
 });
@@ -679,6 +704,11 @@ function renderBannedList() {
 }
 
 window.unbanUser = function(username) {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
   bannedUsers = bannedUsers.filter(u => u !== username);
   localStorage.setItem('bannedUsers', JSON.stringify(bannedUsers));
   renderBannedList();
@@ -692,6 +722,11 @@ function updateBannedCount() {
 
 // Admin Dashboard
 viewDashboardBtn.addEventListener('click', () => {
+  // 🔑 SECURITY CHECK
+  if (!currentUser.isAdmin) {
+    alert('Unauthorized action.');
+    return;
+  }
   renderDashboard();
   dashboardModal.style.display = 'flex';
 });
