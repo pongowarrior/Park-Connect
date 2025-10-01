@@ -1,12 +1,14 @@
 const API_URL = "https://sheetdb.io/api/v1/gsn1yzn8shex6";
 const ADMIN_PASSWORD = "Park01admin";
+// 🔑 IMGBB API Key for image hosting
+const IMGBB_API_KEY = '9998758e30b37b78e736c467b94f2c5b'; 
 
 let currentUser = { name: '', team: '', isAdmin: false };
 let currentFilter = 'all';
 let bannedUsers = JSON.parse(localStorage.getItem('bannedUsers') || '[]');
 let lastPostCount = 0;
 let notificationsEnabled = false;
-let currentPhotoBase64 = null;
+let currentPhotoBase64 = null; // Holds the Base64 Data URI for local preview and ImgBB upload
 
 // Main categories accessible to everyone
 const MAIN_CATEGORIES = ['all', 'shifts', 'events', 'lost&found', 'general'];
@@ -82,6 +84,47 @@ const closeImageBtn = document.getElementById('closeImageBtn');
 
 let currentEditingPost = null;
 let allPosts = [];
+
+/**
+ * Uploads a Base64 image string to ImgBB and returns the public URL.
+ * @param {string} base64DataUri The Base64 image string including the data URI prefix.
+ * @returns {Promise<string|null>} The direct image URL from ImgBB, or null on failure.
+ */
+async function uploadImageToImgBB(base64DataUri) {
+  const url = `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`;
+  
+  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'YOUR_IMGBB_API_KEY') {
+    console.error('ImgBB API Key is not set. Cannot upload image.');
+    return null;
+  }
+  
+  // ImgBB API expects the raw Base64 string without the "data:image/..." prefix
+  const cleanBase64 = base64DataUri.split(',')[1]; 
+
+  const formData = new FormData();
+  formData.append('image', cleanBase64); // The clean Base64 string
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData // Let the browser set the Content-Type for FormData
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.data && data.data.url) {
+      console.log('ImgBB upload successful:', data.data.url);
+      return data.data.url; // The direct link to the image
+    } else {
+      console.error('ImgBB upload failed:', data.error?.message || 'Unknown API error', data);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error during ImgBB API call:', error);
+    return null;
+  }
+}
+
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
@@ -371,13 +414,24 @@ async function loadPosts() {
     // Check for new posts and notify
     if (lastPostCount > 0 && newPosts.length > lastPostCount) {
       const newPostsCount = newPosts.length - lastPostCount;
-      const latestPost = newPosts[newPosts.length - 1];
+      // Get the last post, assuming the API returns them in a certain order or we sort it later.
+      // Better to check for a new timestamp than relying on array order for notification.
+      // Since renderWall reverses, we'll use the pre-reversed array for notification simplicity.
       
-      showBanner(`${newPostsCount} new post${newPostsCount > 1 ? 's' : ''}!`);
-      showNotification(
-        'New post on Park Connect',
-        `${latestPost.name}: ${latestPost.message.substring(0, 50)}...`
-      );
+      // Find the last known post time
+      const lastKnownPostTime = allPosts.length > 0 ? new Date([...allPosts].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))[0].timestamp) : new Date(0);
+      
+      const trulyNewPosts = newPosts.filter(p => new Date(p.timestamp) > lastKnownPostTime);
+      
+      if (trulyNewPosts.length > 0) {
+        const newestPost = trulyNewPosts.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        
+        showBanner(`${trulyNewPosts.length} new post${trulyNewPosts.length > 1 ? 's' : ''}!`);
+        showNotification(
+          'New post on Park Connect',
+          `${newestPost.name}: ${newestPost.message.substring(0, 50)}...`
+        );
+      }
     }
     
     lastPostCount = newPosts.length;
@@ -409,15 +463,21 @@ function renderWall() {
     return;
   }
   
-  filtered.reverse().forEach((p, index) => {
+  // Sort by timestamp descending before reversing for rendering order (newest at bottom)
+  // Reversing twice is unnecessary complexity; sort descending and iterate.
+  filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
+  filtered.forEach((p, index) => {
     const note = document.createElement('div');
     note.classList.add('sticky');
     note.dataset.category = p.category || 'general';
-    note.dataset.index = index;
+    // Use the index for filtering context, although deleting relies on timestamp/row_id
+    note.dataset.index = index; 
     note.style.setProperty('--rand', Math.random());
     
     let photoHtml = '';
-    if (p.photo) {
+    // p.photo now contains the URL from ImgBB
+    if (p.photo && p.photo.startsWith('http')) { 
       photoHtml = `<img src="${escapeHtml(p.photo)}" alt="Post photo" class="sticky-photo" onclick="viewImage('${escapeHtml(p.photo)}')" />`;
     }
     
@@ -472,20 +532,29 @@ function formatDate(timestamp) {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-// Edit Post
-window.editPost = function(index) {
+// Helper to get the post currently being viewed/edited based on filter/permissions
+function getPostByIndex(index) {
   const allowedCategories = getAllowedCategories(currentUser);
-  const reversedPosts = [...allPosts].reverse();
   
   let filteredPosts = currentFilter === 'all' 
-    ? reversedPosts 
-    : reversedPosts.filter(p => p.category === currentFilter);
+    ? [...allPosts] 
+    : allPosts.filter(p => p.category === currentFilter);
   
   if (allowedCategories !== null) {
     filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
   }
   
-  const post = filteredPosts[index];
+  // Apply the same descending sort used in renderWall
+  filteredPosts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  
+  return filteredPosts[index];
+}
+
+// Edit Post
+window.editPost = function(index) {
+  const post = getPostByIndex(index);
+  if (!post) return;
+  
   currentEditingPost = post;
   
   editCategory.value = post.category;
@@ -493,6 +562,7 @@ window.editPost = function(index) {
   editModal.style.display = 'flex';
 };
 
+// Save Edit (replaces old post with new one - SheetDB workaround)
 saveEditBtn.addEventListener('click', async () => {
   const newMessage = editMessage.value.trim();
   const newCategory = editCategory.value;
@@ -502,11 +572,22 @@ saveEditBtn.addEventListener('click', async () => {
     return;
   }
   
+  // This logic is fragile but necessary for SheetDB without a true 'row_id'
+  const oldTimestamp = encodeURIComponent(currentEditingPost.timestamp);
+  
   try {
-    await fetch(`${API_URL}/timestamp/${encodeURIComponent(currentEditingPost.timestamp)}`, {
+    // 1. Delete the old post
+    const deleteRes = await fetch(`${API_URL}/timestamp/${oldTimestamp}`, {
       method: 'DELETE'
     });
     
+    if (!deleteRes.ok) {
+       console.error('Delete failed:', deleteRes.statusText);
+       // Attempt to proceed, but warn the user
+       // We don't block the post entirely as it's possible SheetDB already deleted it but didn't return 200/204
+    }
+    
+    // 2. Add the new post
     await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -516,8 +597,8 @@ saveEditBtn.addEventListener('click', async () => {
           category: newCategory,
           name: currentEditingPost.name,
           team: currentEditingPost.team,
-          timestamp: new Date().toISOString(),
-          photo: currentEditingPost.photo || ''
+          timestamp: new Date().toISOString(), // New timestamp to ensure uniqueness
+          photo: currentEditingPost.photo || '' // Keep the original photo URL
         }]
       })
     });
@@ -540,18 +621,8 @@ cancelEditBtn.addEventListener('click', () => {
 window.deletePost = async function(index) {
   if (!confirm('Are you sure you want to delete this post?')) return;
   
-  const allowedCategories = getAllowedCategories(currentUser);
-  const reversedPosts = [...allPosts].reverse();
-  
-  let filteredPosts = currentFilter === 'all' 
-    ? reversedPosts 
-    : reversedPosts.filter(p => p.category === currentFilter);
-  
-  if (allowedCategories !== null) {
-    filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
-  }
-  
-  const post = filteredPosts[index];
+  const post = getPostByIndex(index);
+  if (!post) return;
   
   try {
     const res = await fetch(`${API_URL}/timestamp/${encodeURIComponent(post.timestamp)}`, {
@@ -646,8 +717,8 @@ function renderDashboard() {
   const uniqueUsers = new Set(recentPosts.map(p => p.name));
   document.getElementById('activeUsers').textContent = uniqueUsers.size;
   
-  // Posts with photos
-  const withPhotos = allPosts.filter(p => p.photo && p.photo.length > 0).length;
+  // Posts with photos (checking for a valid URL start)
+  const withPhotos = allPosts.filter(p => p.photo && p.photo.length > 0 && p.photo.startsWith('http')).length;
   document.getElementById('withPhotos').textContent = withPhotos;
   
   // Posts by category
@@ -685,7 +756,7 @@ function renderDashboard() {
   document.getElementById('userStats').innerHTML = userStatsHtml || '<div class="empty-banned">No activity in the last 7 days</div>';
 }
 
-// Submit post
+// Submit post - MODIFIED FOR IMGBB UPLOAD
 postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   
@@ -707,6 +778,25 @@ postForm.addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.textContent = 'Posting...';
   
+  let photoUrl = ''; // This will hold the ImgBB URL
+
+  // 1. Handle Image Upload if base64 data exists and category supports photos
+  if (currentPhotoBase64 && PHOTO_CATEGORIES.includes(category)) {
+      console.log('Attempting to upload image to ImgBB...');
+      photoUrl = await uploadImageToImgBB(currentPhotoBase64);
+
+      if (!photoUrl) {
+          alert('🚨 Failed to upload image. Post cancelled.');
+          btn.disabled = false;
+          btn.textContent = 'Post';
+          return;
+      }
+  } else if (currentPhotoBase64 && !PHOTO_CATEGORIES.includes(category)) {
+       console.warn(`Photo attached but category '${category}' does not support photos. Sending post without image.`);
+       // Since the input should be hidden, this is a safety check. photoUrl remains ''
+  }
+
+  // 2. Post to SheetDB using the generated photoUrl
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -718,7 +808,7 @@ postForm.addEventListener('submit', async (e) => {
           name: currentUser.name,
           team: currentUser.team,
           timestamp: new Date().toISOString(),
-          photo: currentPhotoBase64 || ''
+          photo: photoUrl || '' // Send the ImgBB URL or an empty string
         }]
       })
     });
