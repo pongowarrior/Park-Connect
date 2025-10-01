@@ -62,8 +62,17 @@
     <div id="adminPanel" style="display: none;">
       <div class="admin-panel-content">
         <h3>🛡️ Admin Controls</h3>
-        <button id="viewBannedBtn" class="admin-btn">View Banned Users (<span id="bannedCount">0</span>)</button>
+        <div class="admin-buttons">
+          <button id="viewDashboardBtn" class="admin-btn">📊 Dashboard</button>
+          <button id="viewBannedBtn" class="admin-btn">View Banned (<span id="bannedCount">0</span>)</button>
+        </div>
       </div>
+    </div>
+
+    <!-- Notification Banner -->
+    <div id="notificationBanner" class="notification-banner" style="display: none;">
+      <span id="notificationText"></span>
+      <button id="closeNotification">✕</button>
     </div>
 
     <div class="filters">
@@ -116,7 +125,13 @@
         </select>
         <div class="form-row">
           <input type="text" id="postInput" maxlength="200" placeholder="What's happening?" required />
+          <label for="photoInput" class="photo-btn" id="photoLabel" title="Add photo">📷</label>
+          <input type="file" id="photoInput" accept="image/*" style="display: none;" />
           <button type="submit">Post</button>
+        </div>
+        <div id="photoPreview" class="photo-preview" style="display: none;">
+          <img id="previewImage" alt="Preview" />
+          <button type="button" id="removePhoto" class="remove-photo">✕</button>
         </div>
       </div>
     </form>
@@ -157,6 +172,47 @@
       <h3>Banned Users</h3>
       <div id="bannedList"></div>
       <button id="closeBannedBtn" class="btn-secondary">Close</button>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard Modal -->
+  <div id="dashboardModal" class="modal" style="display: none;">
+    <div class="modal-content dashboard-modal">
+      <h3>📊 Admin Dashboard</h3>
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalPosts">0</div>
+          <div class="stat-label">Total Posts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="postsToday">0</div>
+          <div class="stat-label">Posts Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="activeUsers">0</div>
+          <div class="stat-label">Active Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="withPhotos">0</div>
+          <div class="stat-label">Posts with Photos</div>
+        </div>
+      </div>
+      
+      <h4>Posts by Category</h4>
+      <div id="categoryStats" class="category-stats"></div>
+      
+      <h4>Most Active Users (Last 7 Days)</h4>
+      <div id="userStats" class="user-stats"></div>
+      
+      <button id="closeDashboardBtn" class="btn-secondary">Close</button>
+    </div>
+  </div>
+
+  <!-- Image Viewer Modal -->
+  <div id="imageModal" class="modal" style="display: none;">
+    <div class="modal-content image-modal-content">
+      <img id="fullImage" alt="Full size" />
+      <button id="closeImageBtn" class="close-image-btn">✕</button>
     </div>
   </div>
 

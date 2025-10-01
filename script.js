@@ -4,6 +4,9 @@ const ADMIN_PASSWORD = "Park01admin";
 let currentUser = { name: '', team: '', isAdmin: false };
 let currentFilter = 'all';
 let bannedUsers = JSON.parse(localStorage.getItem('bannedUsers') || '[]');
+let lastPostCount = 0;
+let notificationsEnabled = false;
+let currentPhotoBase64 = null;
 
 // Main categories accessible to everyone
 const MAIN_CATEGORIES = ['all', 'shifts', 'events', 'lost&found', 'general'];
@@ -19,9 +22,12 @@ const DEPARTMENT_MAP = {
   'Security': 'security',
   'Entertainment': 'entertainment',
   'Shop': 'shop',
-  'Guest Services': 'general', // Maps to general
-  'Other': 'general' // Maps to general
+  'Guest Services': 'general',
+  'Other': 'general'
 };
+
+// Categories that support photos
+const PHOTO_CATEGORIES = ['maintenance', 'lost&found'];
 
 // DOM elements
 const loginScreen = document.getElementById('loginScreen');
@@ -44,7 +50,20 @@ const postCategory = document.getElementById('postCategory');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const adminPanel = document.getElementById('adminPanel');
 const viewBannedBtn = document.getElementById('viewBannedBtn');
+const viewDashboardBtn = document.getElementById('viewDashboardBtn');
 const bannedCount = document.getElementById('bannedCount');
+
+// Photo upload elements
+const photoInput = document.getElementById('photoInput');
+const photoLabel = document.getElementById('photoLabel');
+const photoPreview = document.getElementById('photoPreview');
+const previewImage = document.getElementById('previewImage');
+const removePhoto = document.getElementById('removePhoto');
+
+// Notification elements
+const notificationBanner = document.getElementById('notificationBanner');
+const notificationText = document.getElementById('notificationText');
+const closeNotification = document.getElementById('closeNotification');
 
 // Modals
 const editModal = document.getElementById('editModal');
@@ -55,8 +74,14 @@ const cancelEditBtn = document.getElementById('cancelEditBtn');
 const bannedModal = document.getElementById('bannedModal');
 const bannedList = document.getElementById('bannedList');
 const closeBannedBtn = document.getElementById('closeBannedBtn');
+const dashboardModal = document.getElementById('dashboardModal');
+const closeDashboardBtn = document.getElementById('closeDashboardBtn');
+const imageModal = document.getElementById('imageModal');
+const fullImage = document.getElementById('fullImage');
+const closeImageBtn = document.getElementById('closeImageBtn');
 
 let currentEditingPost = null;
+let allPosts = [];
 
 // Register Service Worker for PWA
 if ('serviceWorker' in navigator) {
@@ -66,6 +91,103 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('Service Worker registration failed:', err));
   });
 }
+
+// Request notification permission
+async function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    const permission = await Notification.requestPermission();
+    notificationsEnabled = permission === 'granted';
+  } else if (Notification.permission === 'granted') {
+    notificationsEnabled = true;
+  }
+}
+
+// Show notification
+function showNotification(title, body) {
+  if (!notificationsEnabled || !('Notification' in window)) return;
+  
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'park-connect-notification'
+    });
+  }
+}
+
+// Show in-app notification banner
+function showBanner(message) {
+  notificationText.textContent = message;
+  notificationBanner.style.display = 'flex';
+  setTimeout(() => {
+    notificationBanner.style.display = 'none';
+  }, 5000);
+}
+
+closeNotification.addEventListener('click', () => {
+  notificationBanner.style.display = 'none';
+});
+
+// Photo upload handling
+photoInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  // Check file size (max 2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Image size must be less than 2MB');
+    photoInput.value = '';
+    return;
+  }
+  
+  // Read and convert to base64
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    currentPhotoBase64 = event.target.result;
+    previewImage.src = currentPhotoBase64;
+    photoPreview.style.display = 'block';
+    photoLabel.classList.add('has-photo');
+  };
+  reader.readAsDataURL(file);
+});
+
+removePhoto.addEventListener('click', () => {
+  currentPhotoBase64 = null;
+  photoInput.value = '';
+  photoPreview.style.display = 'none';
+  photoLabel.classList.remove('has-photo');
+});
+
+// Update photo button visibility based on category
+postCategory.addEventListener('change', () => {
+  const category = postCategory.value;
+  if (PHOTO_CATEGORIES.includes(category)) {
+    photoLabel.style.display = 'flex';
+  } else {
+    photoLabel.style.display = 'none';
+    // Clear photo if category changed
+    if (currentPhotoBase64) {
+      removePhoto.click();
+    }
+  }
+});
+
+// Image viewer
+function viewImage(imageData) {
+  fullImage.src = imageData;
+  imageModal.style.display = 'flex';
+}
+
+closeImageBtn.addEventListener('click', () => {
+  imageModal.style.display = 'none';
+});
+
+imageModal.addEventListener('click', (e) => {
+  if (e.target === imageModal) {
+    imageModal.style.display = 'none';
+  }
+});
 
 // Toggle between regular and admin login
 showAdminBtn.addEventListener('click', () => {
@@ -81,8 +203,7 @@ showRegularBtn.addEventListener('click', () => {
 // Function to get user's allowed categories
 function getAllowedCategories(user) {
   if (user.isAdmin) {
-    // Admin sees everything
-    return null; // null means no filter
+    return null;
   }
   
   const userDept = DEPARTMENT_MAP[user.team];
@@ -100,14 +221,12 @@ function updateFilterButtons() {
   const allowedCategories = getAllowedCategories(currentUser);
   
   if (allowedCategories === null) {
-    // Admin - show all buttons
     filterBtns.forEach(btn => {
       btn.style.display = 'inline-block';
     });
     return;
   }
   
-  // Regular user - hide buttons they can't access
   filterBtns.forEach(btn => {
     const category = btn.dataset.filter;
     if (allowedCategories.includes(category)) {
@@ -123,7 +242,6 @@ function updateCategoryDropdowns() {
   const allowedCategories = getAllowedCategories(currentUser);
   
   if (allowedCategories === null) {
-    // Admin - show all options
     Array.from(postCategory.options).forEach(opt => {
       opt.style.display = 'block';
     });
@@ -133,11 +251,10 @@ function updateCategoryDropdowns() {
     return;
   }
   
-  // Regular user - hide options they can't access
   [postCategory, editCategory].forEach(select => {
     Array.from(select.options).forEach(opt => {
       if (opt.value === '') {
-        opt.style.display = 'block'; // Keep placeholder
+        opt.style.display = 'block';
         return;
       }
       
@@ -151,7 +268,7 @@ function updateCategoryDropdowns() {
 }
 
 // Regular Login
-loginBtn.addEventListener('click', () => {
+loginBtn.addEventListener('click', async () => {
   const name = userName.value.trim();
   const team = userTeam.value;
   
@@ -160,7 +277,6 @@ loginBtn.addEventListener('click', () => {
     return;
   }
   
-  // Check if user is banned
   if (bannedUsers.includes(name.toLowerCase())) {
     alert('You have been banned from posting. Contact an administrator.');
     return;
@@ -172,22 +288,18 @@ loginBtn.addEventListener('click', () => {
   loginScreen.classList.add('hidden');
   mainApp.classList.add('visible');
   
-  // Update UI based on permissions
   updateFilterButtons();
   updateCategoryDropdowns();
   
-  loadPosts();
+  await requestNotificationPermission();
+  await loadPosts();
 });
 
 // Admin Login
-adminLoginBtn.addEventListener('click', (e) => {
+adminLoginBtn.addEventListener('click', async (e) => {
   e.preventDefault();
   
   const password = adminPassword.value.trim();
-  
-  console.log('Admin login attempt');
-  console.log('Password entered:', password);
-  console.log('Expected:', ADMIN_PASSWORD);
   
   if (password !== ADMIN_PASSWORD) {
     alert('Incorrect admin password');
@@ -202,12 +314,12 @@ adminLoginBtn.addEventListener('click', (e) => {
   mainApp.classList.add('visible');
   adminPanel.style.display = 'block';
   
-  // Admin sees everything
   updateFilterButtons();
   updateCategoryDropdowns();
   updateBannedCount();
   
-  loadPosts();
+  await requestNotificationPermission();
+  await loadPosts();
 });
 
 // Logout
@@ -221,8 +333,8 @@ logoutBtn.addEventListener('click', () => {
   adminPanel.style.display = 'none';
   regularLogin.style.display = 'block';
   adminLogin.style.display = 'none';
+  lastPostCount = 0;
   
-  // Reset all filter buttons to visible for next login
   filterBtns.forEach(btn => {
     btn.style.display = 'inline-block';
   });
@@ -234,7 +346,6 @@ filterBtns.forEach(btn => {
     const allowedCategories = getAllowedCategories(currentUser);
     const category = btn.dataset.filter;
     
-    // Check if user can access this category
     if (allowedCategories !== null && !allowedCategories.includes(category)) {
       alert('You do not have access to this category');
       return;
@@ -247,8 +358,6 @@ filterBtns.forEach(btn => {
   });
 });
 
-let allPosts = [];
-
 // Load posts
 async function loadPosts() {
   try {
@@ -257,7 +366,22 @@ async function loadPosts() {
       console.error("Failed to fetch posts:", res.statusText);
       return;
     }
-    allPosts = await res.json();
+    const newPosts = await res.json();
+    
+    // Check for new posts and notify
+    if (lastPostCount > 0 && newPosts.length > lastPostCount) {
+      const newPostsCount = newPosts.length - lastPostCount;
+      const latestPost = newPosts[newPosts.length - 1];
+      
+      showBanner(`${newPostsCount} new post${newPostsCount > 1 ? 's' : ''}!`);
+      showNotification(
+        'New post on Park Connect',
+        `${latestPost.name}: ${latestPost.message.substring(0, 50)}...`
+      );
+    }
+    
+    lastPostCount = newPosts.length;
+    allPosts = newPosts;
     renderWall();
   } catch (err) {
     console.error("Error loading posts:", err);
@@ -270,15 +394,12 @@ function renderWall() {
   
   const allowedCategories = getAllowedCategories(currentUser);
   
-  // Filter by selected category first
   let filtered = currentFilter === 'all' 
     ? allPosts 
     : allPosts.filter(p => p.category === currentFilter);
   
-  // Then filter by permissions (unless admin)
   if (allowedCategories !== null) {
     filtered = filtered.filter(p => {
-      // Show posts from allowed categories only
       return allowedCategories.includes(p.category);
     });
   }
@@ -295,6 +416,11 @@ function renderWall() {
     note.dataset.index = index;
     note.style.setProperty('--rand', Math.random());
     
+    let photoHtml = '';
+    if (p.photo) {
+      photoHtml = `<img src="${escapeHtml(p.photo)}" alt="Post photo" class="sticky-photo" onclick="viewImage('${escapeHtml(p.photo)}')" />`;
+    }
+    
     let adminControls = '';
     if (currentUser.isAdmin) {
       adminControls = `
@@ -310,6 +436,7 @@ function renderWall() {
       <div class="sticky-content">
         <div class="sticky-category">${escapeHtml(p.category || 'general')}</div>
         <div class="sticky-message">${escapeHtml(p.message)}</div>
+        ${photoHtml}
       </div>
       <div class="sticky-footer">
         ${escapeHtml(p.name)} (${escapeHtml(p.team)})<br>
@@ -354,7 +481,6 @@ window.editPost = function(index) {
     ? reversedPosts 
     : reversedPosts.filter(p => p.category === currentFilter);
   
-  // Apply permission filter
   if (allowedCategories !== null) {
     filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
   }
@@ -377,12 +503,10 @@ saveEditBtn.addEventListener('click', async () => {
   }
   
   try {
-    // Delete old post
     await fetch(`${API_URL}/timestamp/${encodeURIComponent(currentEditingPost.timestamp)}`, {
       method: 'DELETE'
     });
     
-    // Add updated post
     await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -392,7 +516,8 @@ saveEditBtn.addEventListener('click', async () => {
           category: newCategory,
           name: currentEditingPost.name,
           team: currentEditingPost.team,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          photo: currentEditingPost.photo || ''
         }]
       })
     });
@@ -402,7 +527,7 @@ saveEditBtn.addEventListener('click', async () => {
     await loadPosts();
   } catch (err) {
     console.error('Error updating post:', err);
-    alert('Failed to update post. Make sure SheetDB allows DELETE operations.');
+    alert('Failed to update post.');
   }
 });
 
@@ -422,7 +547,6 @@ window.deletePost = async function(index) {
     ? reversedPosts 
     : reversedPosts.filter(p => p.category === currentFilter);
   
-  // Apply permission filter
   if (allowedCategories !== null) {
     filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
   }
@@ -438,7 +562,7 @@ window.deletePost = async function(index) {
       alert('Post deleted successfully');
       await loadPosts();
     } else {
-      alert('Failed to delete post. Make sure SheetDB allows DELETE operations.');
+      alert('Failed to delete post.');
     }
   } catch (err) {
     console.error('Error deleting post:', err);
@@ -495,6 +619,72 @@ function updateBannedCount() {
   bannedCount.textContent = bannedUsers.length;
 }
 
+// Admin Dashboard
+viewDashboardBtn.addEventListener('click', () => {
+  renderDashboard();
+  dashboardModal.style.display = 'flex';
+});
+
+closeDashboardBtn.addEventListener('click', () => {
+  dashboardModal.style.display = 'none';
+});
+
+function renderDashboard() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  // Total posts
+  document.getElementById('totalPosts').textContent = allPosts.length;
+  
+  // Posts today
+  const postsToday = allPosts.filter(p => new Date(p.timestamp) >= todayStart).length;
+  document.getElementById('postsToday').textContent = postsToday;
+  
+  // Active users (unique users in last 7 days)
+  const recentPosts = allPosts.filter(p => new Date(p.timestamp) >= weekAgo);
+  const uniqueUsers = new Set(recentPosts.map(p => p.name));
+  document.getElementById('activeUsers').textContent = uniqueUsers.size;
+  
+  // Posts with photos
+  const withPhotos = allPosts.filter(p => p.photo && p.photo.length > 0).length;
+  document.getElementById('withPhotos').textContent = withPhotos;
+  
+  // Posts by category
+  const categoryCount = {};
+  allPosts.forEach(p => {
+    const cat = p.category || 'general';
+    categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+  });
+  
+  const categoryStatsHtml = Object.entries(categoryCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, count]) => `
+      <div class="category-stat-item">
+        <span class="category-stat-name">${escapeHtml(cat)}</span>
+        <span class="category-stat-count">${count}</span>
+      </div>
+    `).join('');
+  document.getElementById('categoryStats').innerHTML = categoryStatsHtml;
+  
+  // Most active users (last 7 days)
+  const userCount = {};
+  recentPosts.forEach(p => {
+    userCount[p.name] = (userCount[p.name] || 0) + 1;
+  });
+  
+  const userStatsHtml = Object.entries(userCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => `
+      <div class="user-stat-item">
+        <span class="user-stat-name">${escapeHtml(name)}</span>
+        <span class="user-stat-badge">${count} posts</span>
+      </div>
+    `).join('');
+  document.getElementById('userStats').innerHTML = userStatsHtml || '<div class="empty-banned">No activity in the last 7 days</div>';
+}
+
 // Submit post
 postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -507,7 +697,6 @@ postForm.addEventListener('submit', async (e) => {
     return;
   }
   
-  // Check if user can post to this category
   const allowedCategories = getAllowedCategories(currentUser);
   if (allowedCategories !== null && !allowedCategories.includes(category)) {
     alert('You do not have permission to post to this category');
@@ -528,7 +717,8 @@ postForm.addEventListener('submit', async (e) => {
           category: category,
           name: currentUser.name,
           team: currentUser.team,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          photo: currentPhotoBase64 || ''
         }]
       })
     });
@@ -537,6 +727,12 @@ postForm.addEventListener('submit', async (e) => {
     
     postInput.value = "";
     postCategory.value = "";
+    
+    // Clear photo
+    if (currentPhotoBase64) {
+      removePhoto.click();
+    }
+    
     await loadPosts();
   } catch (err) {
     console.error("Error posting:", err);
@@ -548,3 +744,6 @@ postForm.addEventListener('submit', async (e) => {
 
 // Auto-refresh every 30 seconds
 setInterval(loadPosts, 30000);
+
+// Make viewImage global
+window.viewImage = viewImage;
