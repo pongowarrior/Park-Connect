@@ -5,6 +5,24 @@ let currentUser = { name: '', team: '', isAdmin: false };
 let currentFilter = 'all';
 let bannedUsers = JSON.parse(localStorage.getItem('bannedUsers') || '[]');
 
+// Main categories accessible to everyone
+const MAIN_CATEGORIES = ['all', 'shifts', 'events', 'lost&found', 'general'];
+
+// Department mapping - matches team name to category
+const DEPARTMENT_MAP = {
+  'F&B': 'f&b',
+  'Food & Beverage': 'f&b',
+  'Maintenance': 'maintenance',
+  'Cleaning': 'cleaning',
+  'Admin': 'administration',
+  'Administration': 'administration',
+  'Security': 'security',
+  'Entertainment': 'entertainment',
+  'Shop': 'shop',
+  'Guest Services': 'general', // Maps to general
+  'Other': 'general' // Maps to general
+};
+
 // DOM elements
 const loginScreen = document.getElementById('loginScreen');
 const mainApp = document.getElementById('mainApp');
@@ -60,6 +78,78 @@ showRegularBtn.addEventListener('click', () => {
   regularLogin.style.display = 'block';
 });
 
+// Function to get user's allowed categories
+function getAllowedCategories(user) {
+  if (user.isAdmin) {
+    // Admin sees everything
+    return null; // null means no filter
+  }
+  
+  const userDept = DEPARTMENT_MAP[user.team];
+  const allowed = [...MAIN_CATEGORIES];
+  
+  if (userDept && userDept !== 'general') {
+    allowed.push(userDept);
+  }
+  
+  return allowed;
+}
+
+// Function to hide/show filter buttons based on permissions
+function updateFilterButtons() {
+  const allowedCategories = getAllowedCategories(currentUser);
+  
+  if (allowedCategories === null) {
+    // Admin - show all buttons
+    filterBtns.forEach(btn => {
+      btn.style.display = 'inline-block';
+    });
+    return;
+  }
+  
+  // Regular user - hide buttons they can't access
+  filterBtns.forEach(btn => {
+    const category = btn.dataset.filter;
+    if (allowedCategories.includes(category)) {
+      btn.style.display = 'inline-block';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+}
+
+// Function to update category dropdowns based on permissions
+function updateCategoryDropdowns() {
+  const allowedCategories = getAllowedCategories(currentUser);
+  
+  if (allowedCategories === null) {
+    // Admin - show all options
+    Array.from(postCategory.options).forEach(opt => {
+      opt.style.display = 'block';
+    });
+    Array.from(editCategory.options).forEach(opt => {
+      opt.style.display = 'block';
+    });
+    return;
+  }
+  
+  // Regular user - hide options they can't access
+  [postCategory, editCategory].forEach(select => {
+    Array.from(select.options).forEach(opt => {
+      if (opt.value === '') {
+        opt.style.display = 'block'; // Keep placeholder
+        return;
+      }
+      
+      if (allowedCategories.includes(opt.value)) {
+        opt.style.display = 'block';
+      } else {
+        opt.style.display = 'none';
+      }
+    });
+  });
+}
+
 // Regular Login
 loginBtn.addEventListener('click', () => {
   const name = userName.value.trim();
@@ -81,6 +171,10 @@ loginBtn.addEventListener('click', () => {
   
   loginScreen.classList.add('hidden');
   mainApp.classList.add('visible');
+  
+  // Update UI based on permissions
+  updateFilterButtons();
+  updateCategoryDropdowns();
   
   loadPosts();
 });
@@ -107,6 +201,10 @@ adminLoginBtn.addEventListener('click', (e) => {
   loginScreen.classList.add('hidden');
   mainApp.classList.add('visible');
   adminPanel.style.display = 'block';
+  
+  // Admin sees everything
+  updateFilterButtons();
+  updateCategoryDropdowns();
   updateBannedCount();
   
   loadPosts();
@@ -123,11 +221,25 @@ logoutBtn.addEventListener('click', () => {
   adminPanel.style.display = 'none';
   regularLogin.style.display = 'block';
   adminLogin.style.display = 'none';
+  
+  // Reset all filter buttons to visible for next login
+  filterBtns.forEach(btn => {
+    btn.style.display = 'inline-block';
+  });
 });
 
 // Filter buttons
 filterBtns.forEach(btn => {
   btn.addEventListener('click', () => {
+    const allowedCategories = getAllowedCategories(currentUser);
+    const category = btn.dataset.filter;
+    
+    // Check if user can access this category
+    if (allowedCategories !== null && !allowedCategories.includes(category)) {
+      alert('You do not have access to this category');
+      return;
+    }
+    
     filterBtns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.dataset.filter;
@@ -152,13 +264,24 @@ async function loadPosts() {
   }
 }
 
-// Render wall with filter
+// Render wall with filter AND permissions
 function renderWall() {
   wall.innerHTML = "";
   
-  const filtered = currentFilter === 'all' 
+  const allowedCategories = getAllowedCategories(currentUser);
+  
+  // Filter by selected category first
+  let filtered = currentFilter === 'all' 
     ? allPosts 
     : allPosts.filter(p => p.category === currentFilter);
+  
+  // Then filter by permissions (unless admin)
+  if (allowedCategories !== null) {
+    filtered = filtered.filter(p => {
+      // Show posts from allowed categories only
+      return allowedCategories.includes(p.category);
+    });
+  }
   
   if (filtered.length === 0) {
     wall.innerHTML = '<div class="empty-state"><h2>No posts yet</h2><p>Be the first to post!</p></div>';
@@ -224,10 +347,17 @@ function formatDate(timestamp) {
 
 // Edit Post
 window.editPost = function(index) {
+  const allowedCategories = getAllowedCategories(currentUser);
   const reversedPosts = [...allPosts].reverse();
-  const filteredPosts = currentFilter === 'all' 
+  
+  let filteredPosts = currentFilter === 'all' 
     ? reversedPosts 
     : reversedPosts.filter(p => p.category === currentFilter);
+  
+  // Apply permission filter
+  if (allowedCategories !== null) {
+    filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
+  }
   
   const post = filteredPosts[index];
   currentEditingPost = post;
@@ -285,10 +415,17 @@ cancelEditBtn.addEventListener('click', () => {
 window.deletePost = async function(index) {
   if (!confirm('Are you sure you want to delete this post?')) return;
   
+  const allowedCategories = getAllowedCategories(currentUser);
   const reversedPosts = [...allPosts].reverse();
-  const filteredPosts = currentFilter === 'all' 
+  
+  let filteredPosts = currentFilter === 'all' 
     ? reversedPosts 
     : reversedPosts.filter(p => p.category === currentFilter);
+  
+  // Apply permission filter
+  if (allowedCategories !== null) {
+    filteredPosts = filteredPosts.filter(p => allowedCategories.includes(p.category));
+  }
   
   const post = filteredPosts[index];
   
@@ -367,6 +504,13 @@ postForm.addEventListener('submit', async (e) => {
   
   if (!text || !category) {
     alert('Please select a category and write a message');
+    return;
+  }
+  
+  // Check if user can post to this category
+  const allowedCategories = getAllowedCategories(currentUser);
+  if (allowedCategories !== null && !allowedCategories.includes(category)) {
+    alert('You do not have permission to post to this category');
     return;
   }
   
